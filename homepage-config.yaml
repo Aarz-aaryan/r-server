@@ -1,11 +1,85 @@
 ---
 # Homepage Configuration for r-server
-# Docs: https://gethomepage.dev
+# https://gethomepage.dev
 
 header:
   title: r-server
-  subtitle: Resource Server Dashboard
-  icon: satellite
+  subtitle: Resource Server
+  icon: server
+
+background: https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=2560&q=80
+cardBlur: xs
+
+theme: dark
+color: indigo
+
+services:
+  - group: Media
+    name: Jellyfin
+    description: Movies & TV
+    href: http://100.84.224.18:8096
+    icon: jellyfin
+    container: jellyfin
+  - group: Media
+    name: Immich
+    description: Photo & Video Backup
+    href: http://100.84.224.18:2283
+    icon: immich
+    container: immich
+  - group: Downloads
+    name: qBittorrent
+    description: Torrent Downloads
+    href: http://100.84.224.18:6811
+    icon: qbittorrent
+    container: qbittorrent
+  - group: Downloads
+    name: Jackett
+    description: Torznab Indexer
+    href: http://100.84.224.18:9117
+    icon: jackett
+    container: jackett
+  - group: Downloads
+    name: Prowlarr
+    description: Indexer Management
+    href: http://100.84.224.18:9696
+    icon: prowlarr
+    container: prowlarr
+  - group: Downloads
+    name: FlareSolverr
+    description: Cloudflare Bypass
+    href: http://100.84.224.18:8191
+    icon: flaresolverr
+    container: flaresolverr
+  - group: System
+    name: Uptime Kuma
+    description: Service Monitoring
+    href: http://100.84.224.18:3001
+    icon: uptime-kuma
+    container: uptime-kuma
+  - group: System
+    name: Homepage
+    description: This Dashboard
+    href: http://100.84.224.18:8383
+    icon: homepage
+    container: homepage
+  - group: System
+    name: Reclaimerr
+    description: Media Library Cleanup
+    href: http://100.84.224.18:8977
+    icon: cleanup
+    container: reclaimerr
+  - group: System
+    name: Vaultwarden
+    description: Password Manager
+    href: http://100.84.224.18:80
+    icon: vaultwarden
+    container: vaultwarden
+  - group: System
+    name: Dashy
+    description: Legacy Dashboard
+    href: http://100.84.224.18:4380
+    icon: dashy
+    container: dashy
 
 bookmarks:
   - section: Media
@@ -32,74 +106,31 @@ bookmarks:
       - name: Uptime Kuma
         href: http://100.84.224.18:3001
         icon: uptime-kuma
-      - name: Dashy
-        href: http://100.84.224.18:4380
-        icon: dashy
       - name: Vaultwarden
         href: http://100.84.224.18:80
         icon: vaultwarden
-
-services:
-  - group: Media
-    name: Jellyfin
-    href: http://100.84.224.18:8096
-    icon: jellyfin
-    container: jellyfin
-  - group: Media
-    name: Immich
-    href: http://100.84.224.18:2283
-    icon: immich
-    container: immich
-  - group: Downloads
-    name: qBittorrent
-    href: http://100.84.224.18:6811
-    icon: qbittorrent
-    container: qbittorrent
-  - group: Downloads
-    name: Jackett
-    href: http://100.84.224.18:9117
-    icon: jackett
-    container: jackett
-  - group: Downloads
-    name: Prowlarr
-    href: http://100.84.224.18:9696
-    icon: prowlarr
-    container: prowlarr
-  - group: System
-    name: Uptime Kuma
-    href: http://100.84.224.18:3001
-    icon: uptime-kuma
-    container: uptime-kuma
-  - group: System
-    name: Dashy
-    href: http://100.84.224.18:4380
-    icon: dashy
-    container: dashy
-  - group: System
-    name: Vaultwarden
-    href: http://100.84.224.18:80
-    icon: vaultwarden
-    container: vaultwarden
-  - group: New
-    name: Homepage
-    href: http://100.84.224.18:8383
-    icon: homepage
-    container: homepage
-  - group: New
-    name: Reclaimerr
-    href: http://100.84.224.18:8977
-    icon: cleanup
-    container: reclaimerr
+      - name: Dashy
+        href: http://100.84.224.18:4380
+        icon: dashy
 
 widgets:
-  - widget: glances
-    type: system
-    url: http://100.84.224.18:61208
-    fields:
-      - cpu
-      - mem
   - widget: datetime
-    type: date
+    type: time
     format: en-US
     options:
       style: long
+
+docker:
+  unix_socket:
+    socket: /var/run/docker.sock
+
+layout:
+  System:
+    style: row
+    columns: 3
+  Media:
+    style: row
+    columns: 2
+  Downloads:
+    style: row
+    columns: 3

@@ -1,0 +1,7 @@
+---
+# Homepage Docker Configuration
+# https://gethomepage.dev/configs/docker/
+
+docker:
+  unix_socket:
+    socket: /var/run/docker.sock
