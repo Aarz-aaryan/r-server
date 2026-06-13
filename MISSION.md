@@ -40,7 +40,10 @@ Homelab server for Aaryan Tahir's media management, photo/video backup, password
 | ✅ | Glances | glances | 61208 | UP 2 days | System monitoring agent |
 | ✅ | Vaultwarden | vaultwarden | 80 | UP 2 days | Password manager |
 
-**13 containers total. All UP.**
+| ✅ | Homepage | homepage | 8383 | UP | Dashboard — modern alternative to Dashy |
+| ✅ | Reclaimerr | reclaimerr | 8977 | UP | Media library cleanup — Jellyfin/Plex/Emby |
+
+**15 containers total. All UP.**
 
 ---
 
@@ -66,6 +69,8 @@ Live stats via `http://100.84.224.18:9400/status` (stats-server.py + Glances API
 80    → Vaultwarden (password manager)
 8096  → Jellyfin (movies + TV)
 2283  → Immich (photo/video backup)
+8383  → Homepage (dashboard)
+8977  → Reclaimerr (media cleanup)
 9117  → Jackett (Torznab API)
 9696  → Prowlarr (indexer management)
 6811  → qBittorrent (torrent downloads)

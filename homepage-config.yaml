@@ -1,0 +1,105 @@
+---
+# Homepage Configuration for r-server
+# Docs: https://gethomepage.dev
+
+header:
+  title: r-server
+  subtitle: Resource Server Dashboard
+  icon: satellite
+
+bookmarks:
+  - section: Media
+    items:
+      - name: Jellyfin
+        href: http://100.84.224.18:8096
+        icon: jellyfin
+      - name: Immich
+        href: http://100.84.224.18:2283
+        icon: immich
+  - section: Downloads
+    items:
+      - name: qBittorrent
+        href: http://100.84.224.18:6811
+        icon: qbittorrent
+      - name: Jackett
+        href: http://100.84.224.18:9117
+        icon: jackett
+      - name: Prowlarr
+        href: http://100.84.224.18:9696
+        icon: prowlarr
+  - section: System
+    items:
+      - name: Uptime Kuma
+        href: http://100.84.224.18:3001
+        icon: uptime-kuma
+      - name: Dashy
+        href: http://100.84.224.18:4380
+        icon: dashy
+      - name: Vaultwarden
+        href: http://100.84.224.18:80
+        icon: vaultwarden
+
+services:
+  - group: Media
+    name: Jellyfin
+    href: http://100.84.224.18:8096
+    icon: jellyfin
+    container: jellyfin
+  - group: Media
+    name: Immich
+    href: http://100.84.224.18:2283
+    icon: immich
+    container: immich
+  - group: Downloads
+    name: qBittorrent
+    href: http://100.84.224.18:6811
+    icon: qbittorrent
+    container: qbittorrent
+  - group: Downloads
+    name: Jackett
+    href: http://100.84.224.18:9117
+    icon: jackett
+    container: jackett
+  - group: Downloads
+    name: Prowlarr
+    href: http://100.84.224.18:9696
+    icon: prowlarr
+    container: prowlarr
+  - group: System
+    name: Uptime Kuma
+    href: http://100.84.224.18:3001
+    icon: uptime-kuma
+    container: uptime-kuma
+  - group: System
+    name: Dashy
+    href: http://100.84.224.18:4380
+    icon: dashy
+    container: dashy
+  - group: System
+    name: Vaultwarden
+    href: http://100.84.224.18:80
+    icon: vaultwarden
+    container: vaultwarden
+  - group: New
+    name: Homepage
+    href: http://100.84.224.18:8383
+    icon: homepage
+    container: homepage
+  - group: New
+    name: Reclaimerr
+    href: http://100.84.224.18:8977
+    icon: cleanup
+    container: reclaimerr
+
+widgets:
+  - widget: glances
+    type: system
+    url: http://100.84.224.18:61208
+    fields:
+      - cpu
+      - mem
+  - widget: datetime
+    type: date
+    format: en-US
+    options:
+      style: long
