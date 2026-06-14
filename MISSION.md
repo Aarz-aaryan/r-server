@@ -22,37 +22,39 @@ Homelab server for Aaryan Tahir's media management, photo/video backup, password
 
 ---
 
-## Service Status (2026-06-12)
+## Service Status (2026-06-14)
 
 | | Service | Container | Port | Status | Notes |
 |-|---------|-----------|------|--------|-------|
-| ✅ | Jellyfin | jellyfin | 8096 | UP 2 days | Movies + TV |
-| ✅ | Immich | immich | **2283** | UP 44 min | Photo/video backup, v2.7.5 |
-| ✅ | Immich Postgres | immich-postgres | — | UP 2 days | PostgreSQL 16 |
-| ✅ | Immich Redis | immich-redis | — | UP 2 days | Valkey 9 |
-| ✅ | Immich ML | immich-machine-learning | — | UP 2 days | Healthy |
-| ✅ | Uptime Kuma | uptime-kuma | 3001 | UP 2 days | Monitors all services |
-| ✅ | Jackett | jackett | 9117 | UP 2 days | Torznab, FlareSolverr configured |
-| ✅ | Prowlarr | prowlarr | 9696 | UP 2 days | Indexer management |
-| ✅ | qBittorrent | qbittorrent | 6811 | UP 2 days | Torrent downloads |
-| ✅ | Dashy | dashy | 4380 | UP 2 days | Dashboard |
-| ✅ | FlareSolverr | flaresolverr | 8191 | UP 2 days | Cloudflare bypass |
-| ✅ | Glances | glances | 61208 | UP 2 days | System monitoring agent |
-| ✅ | Vaultwarden | vaultwarden | 80 | UP 2 days | Password manager |
+| ✅ | Jellyfin | jellyfin | 8096 | UP 3 days | Movies + TV |
+| ✅ | Immich | immich | 2283 | UP 22h | Photo/video backup, v2.7.5 |
+| ✅ | Immich Postgres | immich-postgres | — | UP 3 days | PostgreSQL 16 |
+| ✅ | Immich Redis | immich-redis | — | UP 3 days | Valkey 9 |
+| ✅ | Immich ML | immich-machine-learning | — | UP 3 days | Healthy |
+| ✅ | Uptime Kuma | uptime-kuma | 3001 | UP 3 days | Monitors all services |
+| ✅ | Jackett | jackett | 9117 | UP 3 days | Torznab, FlareSolverr configured |
+| ✅ | Prowlarr | prowlarr | 9696 | UP 3 days | Indexer management |
+| ✅ | qBittorrent | qbittorrent | 6811 | UP 3 days | Torrent downloads |
+| ✅ | Dashy | dashy | 4380 | UP 3 days | Dashboard |
+| ✅ | FlareSolverr | flaresolverr | 8191 | UP 3 days | Cloudflare bypass |
+| ✅ | Glances | glances | 61208 | UP 3 days | System monitoring agent |
+| ✅ | Vaultwarden | vaultwarden | 80 | UP 3 days | Password manager |
+| ✅ | Homepage | homepage | 8383 | UP 26m | Dashboard — modern alternative to Dashy |
+| ✅ | Reclaimerr | reclaimerr | 8977 | UP 3h | Media library cleanup — Jellyfin/Plex/Emby |
 
-| ✅ | Homepage | homepage | 8383 | UP | Dashboard — modern alternative to Dashy |
-| ✅ | Reclaimerr | reclaimerr | 8977 | UP | Media library cleanup — Jellyfin/Plex/Emby |
-
-**15 containers total. All UP.**
+**16 containers total. All UP.**
 
 ---
 
-## Hardware Utilization
-- **CPU:** 4 cores, ~4.4GB RAM used, ~26GB available
-- **GPU:** RTX 2070 8GB — 7.9GB free (not currently in use by any container)
+## Hardware Utilization (2026-06-14)
+- **CPU:** 4 cores, ~3.9GB RAM used, ~27GB available
+- **GPU:** RTX 2070 8GB — 7959MiB free (0% utilization, idle)
 - **Storage:** 2.8TB mount — 1% used (3.7GB used, 2.8TB free)
 
 ---
+
+## Kuma Monitors (2026-06-14)
+- **8 monitors, all UP:** Jellyfin · Immich · qBittorrent · Jackett · Prowlarr · FlareSolverr · Dashy · Vaultwarden
 
 ## Dashy Dashboard
 - **URL:** http://100.84.224.18:4380
