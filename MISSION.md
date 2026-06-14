@@ -27,10 +27,10 @@ Homelab server for Aaryan Tahir's media management, photo/video backup, password
 | | Service | Container | Port | Status | Notes |
 |-|---------|-----------|------|--------|-------|
 | ✅ | Jellyfin | jellyfin | 8096 | UP 3 days | Movies + TV |
-| ✅ | Immich | immich | 2283 | UP 22h | Photo/video backup, v2.7.5 |
-| ✅ | Immich Postgres | immich-postgres | — | UP 3 days | PostgreSQL 16 |
-| ✅ | Immich Redis | immich-redis | — | UP 3 days | Valkey 9 |
-| ✅ | Immich ML | immich-machine-learning | — | UP 3 days | Healthy |
+| ✅ | Immich | immich | 2283 | UP | **Data migrated to HDD** — library (15GB), encoded-video (4GB), thumbs, backups |
+| ✅ | Immich Postgres | immich-postgres | — | UP | **DB stays on SSD** (exFAT chown incompatibility) |
+| ✅ | Immich Redis | immich-redis | — | UP | Healthy |
+| ✅ | Immich ML | immich-machine-learning | — | UP | Healthy |
 | ✅ | Uptime Kuma | uptime-kuma | 3001 | UP 3 days | Monitors all services |
 | ✅ | Jackett | jackett | 9117 | UP 3 days | Torznab, FlareSolverr configured |
 | ✅ | Prowlarr | prowlarr | 9696 | UP 3 days | Indexer management |
@@ -39,17 +39,19 @@ Homelab server for Aaryan Tahir's media management, photo/video backup, password
 | ✅ | FlareSolverr | flaresolverr | 8191 | UP 3 days | Cloudflare bypass |
 | ✅ | Glances | glances | 61208 | UP 3 days | System monitoring agent |
 | ✅ | Vaultwarden | vaultwarden | 80 | UP 3 days | Password manager |
-| ✅ | Homepage | homepage | 8383 | UP 26m | Dashboard — modern alternative to Dashy |
-| ✅ | Reclaimerr | reclaimerr | 8977 | UP 3h | Media library cleanup — Jellyfin/Plex/Emby |
+| ✅ | Homepage | homepage | 8383 | UP | Dashboard |
+| ✅ | Reclaimerr | reclaimerr | 8977 | UP 4h | Media library cleanup |
 
-**16 containers total. All UP.**
+**18 containers total. All UP.**
 
 ---
 
 ## Hardware Utilization (2026-06-14)
 - **CPU:** 4 cores, ~3.9GB RAM used, ~27GB available
 - **GPU:** RTX 2070 8GB — 7959MiB free (0% utilization, idle)
-- **Storage:** 2.8TB mount — 1% used (3.7GB used, 2.8TB free)
+- **Storage:**
+  - **SSD (/)** — 31GB used / 404GB free (7%) — OS, Docker, DB, compose
+  - **HDD (/mnt/storage)** — 28GB used / 2.8TB free (1%) — Immich media (library, encoded-video, thumbs, backups) + media
 
 ---
 
@@ -87,15 +89,26 @@ Live stats via `http://100.84.224.18:9400/status` (stats-server.py + Glances API
 
 ## Storage Layout
 ```
-/mnt/storage/
-├── media/          ← Movies + TV (Jellyfin library)
-├── photos/         ← Immich photo uploads
-├── downloads/
-│   ├── incomplete/
-│   └── completed/  ← qBittorrent torrent imports
-├── nas/            ← General network storage / Samba share
-└── samba/
+/mnt/storage/          ← 2.8TB exFAT HDD (all Immich data + media)
+/mnt/storage/immich/
+├── library/         ← Original uploads (15GB, source of truth)
+├── encoded-video/   ← Transcoded videos (4GB)
+├── thumbs/          ← Thumbnails (450MB)
+├── upload/          ← Temp upload staging (.immich marker)
+├── profile/         ← User profiles (.immich marker)
+├── backups/        ← Immich backups (.immich marker)
+├── model-cache/     ← ML model cache (786MB)
+└── uploads/        ← Additional uploads
+
+/home/r-server/docker/immich-db/  ← PostgreSQL on SSD (261MB)
+  (cannot be on HDD — exFAT has no chown support)
+
+/home/r-server/docker/immich/     ← Compose + config only (SSD)
 ```
+
+**Storage separation:**
+- **SSD (/)** — OS + Docker + DB + compose files (~31GB used, 404GB free)
+- **HDD (/mnt/storage)** — All Immich media (library, encoded-video, thumbs, backups) + media files (~28GB used, 2.8TB free)
 
 ---
 
@@ -152,9 +165,11 @@ Live stats via `http://100.84.224.18:9400/status` (stats-server.py + Glances API
 
 ## Known Issues / Debugging Notes
 - **exFAT storage:** `/mnt/storage` is exFAT — cannot rename folders with special chars (`:` `|`). Applies to all media on this mount.
+- **exFAT + Postgres:** PostgreSQL cannot run from `/mnt/storage` (exFAT has no chown support). DB MUST stay on SSD. Immich media data CAN be on HDD.
 - **SSH user is `r-server@`**, not `aarz@` — `aarz@` has password auth disabled.
 - **Kuma API auth:** Direct SQLite query via SSH is the reliable method.
 - **qBittorrent v5 no permanent password API:** Temp password regenerates on restart.
+- **Immich `.immich` files:** Each Immich data directory must contain a `.immich` marker file. Created on HDD dirs after migration.
 
 ---
 
