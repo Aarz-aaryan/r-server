@@ -2,7 +2,7 @@
 # r-server — Resource Server Mission
 
 ## Mission
-Homelab server for Aaryan Tahir's photo/video backup (Immich), password management (Vaultwarden), and infrastructure monitoring.
+Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync (Nextcloud), password management (Vaultwarden), and infrastructure monitoring.
 
 ---
 
@@ -12,8 +12,9 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 - **OS:** Ubuntu 24.04.1 LTS (Server)
 - **SSH:** `sshpass -p 'aarz1947' ssh r-server@100.84.224.18`
 - **Hardware:** DDR3 32GB RAM, i5 (4 cores), 5TB HDD + 500GB SSD, **RTX 2070 8GB**
-- **Storage mount:** `/mnt/storage` (2.8TB)
-- **Docker compose:** `/home/r-server/docker-compose.yml` (primary, all services)
+- **Storage mount:** `/mnt/storage` (2.8TB, exFAT — no Linux permissions support)
+- **Docker compose:** `/home/r-server/docker-compose.yml` (core infra)
+- **Nextcloud compose:** `/home/r-server/docker/nextcloud-compose.yml`
 - **Immich compose:** `/home/r-server/docker/immich/docker-compose.yml` (runs separately)
 - **Docker socket:** `/var/run/docker.sock`
 
@@ -27,12 +28,14 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 | ✅ | Vaultwarden | vaultwarden | 8080 | UP | Password manager |
 | ✅ | Uptime Kuma | uptime-kuma | 3001 | UP | Monitors all services |
 | ✅ | Glances | glances | 61208 | UP | System stats (host pid/net) |
+| ✅ | Nextcloud | nextcloud | 9080 | UP | File sync, Docs, Calendar, Contacts |
+| ✅ | Nextcloud Redis | nextcloud-redis | — | UP | Nextcloud caching |
 | ✅ | Immich | immich | 2283 | UP | Photo/video backup |
 | ✅ | Immich Postgres | immich-postgres | — | UP | DB on SSD |
 | ✅ | Immich Redis | immich-redis | — | UP | Valkey 9 |
 | ✅ | Immich ML | immich-machine-learning | — | UP | GPU-accelerated |
 
-**8 containers total. All UP.**
+**10 containers total. All UP.**
 
 ---
 
@@ -47,7 +50,7 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 ---
 
 ## Kuma Monitors (2026-06-18)
-- **2 monitors active:** Immich · Vaultwarden
+- **3 monitors active:** Immich · Vaultwarden · **Nextcloud** (added 2026-06-18)
 - **Fixed 2026-06-18:** DB vacuum, orphaned heartbeat cleanup, FlareSolverr ghost monitor deleted
 
 ---
@@ -59,13 +62,14 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 3001   → Uptime Kuma (monitoring dashboard)
 61208  → Glances (system stats agent)
 8383   → Homepage (r-server dashboard)
+9080   → Nextcloud (file sync + productivity suite)
 ```
 
 ---
 
 ## Storage Layout
 ```
-/mnt/storage/          ← 2.8TB
+/mnt/storage/          ← 2.8TB (exFAT — use Docker volumes for permissions)
 ├── immich/
 │   ├── library/        ← Original uploads (source of truth)
 │   ├── encoded-video/  ← Transcoded videos
@@ -78,6 +82,7 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 /home/r-server/docker/homepage/
 /home/r-server/docker/vaultwarden/
 /home/r-server/docker/uptime-kuma/
+/home/r-server/docker/nextcloud-compose.yml  ← Nextcloud stack
 /home/r-server/docker/immich-db/    ← PostgreSQL data (SSD)
 /home/r-server/docker/immich-redis/ ← Valkey data (SSD)
 /home/r-server/docker/immich/.env   ← Immich env vars
@@ -93,6 +98,7 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 | Uptime Kuma | http://100.84.224.18:3001 | — | — |
 | Homepage | http://100.84.224.18:8383 | — | — |
 | Vaultwarden | http://100.84.224.18:8080 | aaryantahir8918@gmail.com | aarz1947 |
+| **Nextcloud** | http://100.84.224.18:9080 | aaryantahir8918@gmail.com | aarz1947 |
 
 ---
 
@@ -116,6 +122,8 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 - **Kuma DB repair 2026-06-18:** Orphaned heartbeat records for deleted monitors purged, VACUUMed, integrity `ok`. Backup at `kuma.db.bak-*`.
 - **Vaultwarden HTTP only:** Runs on internal port 8080. External HTTPS handled by nginx.
 - **Immich runs from separate compose:** `/home/r-server/docker/immich/docker-compose.yml`
+- **exFAT /mnt/storage:** Does not support Linux chown/chmod. Nextcloud data stored in Docker volumes, not bind mounts.
+- **Nextcloud on localhost:9080:** Exposed on 127.0.0.1 only (not public). Access via Tailscale VPN.
 
 ---
 
@@ -130,7 +138,8 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), password manageme
 ## Git History
 | Commit | Description |
 |--------|-------------|
-| `xxxxxxx` | chore: remove Dashy + slskd, update compose + MISSION to 8-container state |
+| `xxxxxxx` | chore: add Nextcloud stack, update MISSION to 10-container state |
+| `70a75c9` | chore: remove Dashy + slskd, update compose + MISSION to 8-container state |
 | `fc18bfc` | New /mini endpoint for Dashy System Status tile |
 | `d44b647` | fix: fully purge music data from r-server |
 | `6bd5e1f` | refactor: split docker-compose into 4 functional groups |
