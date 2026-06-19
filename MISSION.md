@@ -159,9 +159,24 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 
 ---
 
+## Nextcloud + n8n Integration (2026-06-19)
+**Nextcloud on r-server is now accessible from local n8n (device) via Tailscale VPN.**
+
+- **Port binding:** Nextcloud/Collabra changed from `127.0.0.1:9080` → `100.84.224.18:9080` (Tailscale-accessible)
+- **App password:** Generated `n8n-integration` via Nextcloud OCC
+- **n8n credential:** `Nextcloud r-server` (ID: `qXY4jZrmhjbeDF9L`)
+- **n8n workflows:** `Nextcloud File Browser`, `Nextcloud Integration Test`
+- **WebDAV verified:** LIST/CREATE/UPLOAD/DOWNLOAD/DELETE all confirmed working
+- **Docs:** See `NEXTCLOUD_N8N_INTEGRATION.md` for full details
+
+**Known issue:** n8n v2.10.4 has a bug blocking workflow execution via API — use n8n UI to manually trigger workflows.
+
+---
+
 ## Git History
 | Commit | Description |
 |--------|-------------|
+| `35f1fb1` | feat: Nextcloud + n8n integration — port fix, app password, credential, workflows, docs |
 | `xxxxxxx` | chore: add Nextcloud + Collabora Office suite (Docs/Sheets), 11 containers, external storage |
 | `1c1a9b9` | chore: add Nextcloud stack (file sync, Docs, Calendar), update MISSION to 10 containers |
 | `70a75c9` | chore: remove Dashy + slskd, update compose + MISSION to 8-container state |
