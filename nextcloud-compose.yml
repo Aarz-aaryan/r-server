@@ -6,7 +6,7 @@ services:
     container_name: nextcloud
     restart: unless-stopped
     ports:
-      - "127.0.0.1:9080:80"
+      - "100.84.224.18:9080:80"
     volumes:
       - nextcloud_data:/var/www/html
       - nextcloud_apps:/var/www/html/custom_apps
@@ -43,7 +43,7 @@ services:
     container_name: collabora
     restart: unless-stopped
     ports:
-      - "127.0.0.1:9980:9980"
+      - "100.84.224.18:9980:9980"
     environment:
       - extra_params=--o:ssl.enable=false
       - DONT_GEN_SSL_CERT=true
