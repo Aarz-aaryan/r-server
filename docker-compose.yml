@@ -10,9 +10,11 @@ services:
     volumes:
       - /home/r-server/docker/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=100.84.224.18:8383,localhost,127.0.0.1
 
   vaultwarden:
-    image: vaultwarden/vaultwarden:latest
+    image: vaultwarden/server:latest
     container_name: vaultwarden
     restart: unless-stopped
     ports:
@@ -56,7 +58,7 @@ services:
       POSTGRES_INITDB_ARGS: --data-checksums
     volumes:
       - /home/r-server/docker/immich-db:/var/lib/postgresql/data
-    network_mode: host
+    
 
   immich-redis:
     image: valkey/valkey:9
@@ -85,6 +87,7 @@ services:
       - "2283:2283"
     volumes:
       - /mnt/storage/immich/upload:/data/upload
+      - /mnt/storage/immich/library:/data/library
       - /mnt/storage/immich/encoded-video:/data/encoded-video
       - /mnt/storage/immich/profile:/data/profile
       - /mnt/storage/immich/thumbs:/data/thumbs
@@ -93,7 +96,7 @@ services:
     env_file:
       - /home/r-server/docker/immich/.env
     environment:
-      DB_HOSTNAME: 127.0.0.1
+      DB_HOSTNAME: immich-postgres
       DB_USERNAME: immich
       DB_PASSWORD: aarz1947
       DB_DATABASE_NAME: immich

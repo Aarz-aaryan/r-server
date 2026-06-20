@@ -20,7 +20,7 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 
 ---
 
-## Service Status (2026-06-18)
+## Service Status (2026-06-20)
 
 | | Service | Container | Port | Status | Notes |
 |-|---------|-----------|------|--------|-------|
@@ -31,12 +31,12 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 | ✅ | Nextcloud | nextcloud | 9080 | UP | File sync, Docs, Sheets, Calendar, Contacts |
 | ✅ | Nextcloud Redis | nextcloud-redis | — | UP | Nextcloud caching |
 | ✅ | Collabora Office | collabora | 9980 | UP | Self-hosted Google Docs/Sheets alternative |
-| ✅ | Immich | immich | 2283 | UP | Photo/video backup |
+| ⚠️ | Immich | immich | 2283 | UNHEALTHY | Running, thumbnail gen failures + brute-force attempts |
 | ✅ | Immich Postgres | immich-postgres | — | UP | DB on SSD |
 | ✅ | Immich Redis | immich-redis | — | UP | Valkey 9 |
 | ✅ | Immich ML | immich-machine-learning | — | UP | GPU-accelerated |
 
-**11 containers total. All UP.**
+**11 containers. 10 UP, 1 UNHEALTHY (immich).**
 
 ---
 
@@ -176,15 +176,22 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 ## Git History
 | Commit | Description |
 |--------|-------------|
-| `35f1fb1` | feat: Nextcloud + n8n integration — port fix, app password, credential, workflows, docs |
-| `xxxxxxx` | chore: add Nextcloud + Collabora Office suite (Docs/Sheets), 11 containers, external storage |
+| `ea7f504` | docs: update MISSION with Nextcloud+n8n integration details |
+| `35f1fb1` | feat: Nextcloud + n8n integration — port binding fix, app password, credential, workflows, docs |
+| `43eed0b` | chore: add Nextcloud + Collabora Office (Docs/Sheets), 11 containers, external storage on 3TB |
 | `1c1a9b9` | chore: add Nextcloud stack (file sync, Docs, Calendar), update MISSION to 10 containers |
 | `70a75c9` | chore: remove Dashy + slskd, update compose + MISSION to 8-container state |
-| `fc18bfc` | New /mini endpoint for Dashy System Status tile |
-| `d44b647` | fix: fully purge music data from r-server |
-| `6bd5e1f` | refactor: split docker-compose into 4 functional groups |
+| `3d454a0` | clean: nuke full media stack (2026-06-17) |
+| `f236400` | fix: update r-server mission (2026-06-15) |
 
 ---
 
-## Mission Repo
-https://github.com/Aarz-aaryan/r-server
+## Known Issues / Debugging Notes
+- **SSH user is `r-server@`**, not `aarz@` — `aarz@` has password auth disabled.
+- **Kuma DB repair 2026-06-18:** Orphaned heartbeat records for deleted monitors purged, VACUUMed, integrity `ok`. Backup at `kuma.db.bak-*`.
+- **Vaultwarden HTTP only:** Runs on internal port 8080. External HTTPS handled by nginx.
+- **Immich runs from separate compose:** `/home/r-server/docker/immich/docker-compose.yml`
+- **exFAT /mnt/storage:** Kernel exFAT driver ignores uid/gid mount options. Mounted read-only in Nextcloud. User data in Docker volumes (SSD).
+- **Nextcloud + Collabora on localhost:** Both on 127.0.0.1, access via Tailscale VPN.
+- **⚠️ Immich unhealthy (2026-06-20):** Container running but healthcheck failing. Logs show thumbnail generation failures for deleted DB entries + brute-force login attempts from `100.114.187.58` against `aaryantahir8918@gmail.com`. DB may need cleanup or assets re-indexed.
+- **Homepage config location:** Homepage copies configs from `/home/r-server/docker/homepage/` → `/app/config/config/` inside container on startup. Edit root config files, restart container.
