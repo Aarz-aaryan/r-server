@@ -1,4 +1,4 @@
-version: "3.8"
+name: r-server
 
 services:
   homepage:
@@ -46,71 +46,3 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     pid: host
     network_mode: host
-
-  immich-postgres:
-    image: tensorchord/pgvecto-rs:pg16-v0.2.0
-    container_name: immich-postgres
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: aarz1947
-      POSTGRES_USER: immich
-      POSTGRES_DB: immich
-      POSTGRES_INITDB_ARGS: --data-checksums
-    volumes:
-      - /home/r-server/docker/immich-db:/var/lib/postgresql/data
-    
-
-  immich-redis:
-    image: valkey/valkey:9
-    container_name: immich-redis
-    restart: always
-    healthcheck:
-      test: valkey-cli ping || exit 1
-    volumes:
-      - /home/r-server/docker/immich-redis:/data
-
-  immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:release
-    container_name: immich-machine-learning
-    restart: always
-    volumes:
-      - /mnt/storage/immich/model-cache:/cache
-      - /home/r-server/docker/immich/.env:/env:ro
-    env_file:
-      - /home/r-server/docker/immich/.env
-
-  immich:
-    image: ghcr.io/immich-app/immich-server:release
-    container_name: immich
-    restart: always
-    ports:
-      - "2283:2283"
-    volumes:
-      - /mnt/storage/immich/upload:/data/upload
-      - /mnt/storage/immich/library:/data/library
-      - /mnt/storage/immich/encoded-video:/data/encoded-video
-      - /mnt/storage/immich/profile:/data/profile
-      - /mnt/storage/immich/thumbs:/data/thumbs
-      - /mnt/storage/immich/backups:/data/backups
-      - /etc/localtime:/etc/localtime:ro
-    env_file:
-      - /home/r-server/docker/immich/.env
-    environment:
-      DB_HOSTNAME: immich-postgres
-      DB_USERNAME: immich
-      DB_PASSWORD: aarz1947
-      DB_DATABASE_NAME: immich
-      REDIS_HOSTNAME: immich-redis
-      IMMICH_ADMIN_USER_EMAIL: aaryantahir8918@gmail.com
-      IMMICH_ADMIN_USER_PASSWORD: aarz1947
-    depends_on:
-      immich-postgres:
-        condition: service_started
-      immich-redis:
-        condition: service_healthy
-    healthcheck:
-      test: curl -f http://localhost:2283/api/server/ping || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s

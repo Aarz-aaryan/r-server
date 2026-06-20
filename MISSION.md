@@ -2,7 +2,7 @@
 # r-server — Resource Server Mission
 
 ## Mission
-Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + office (Nextcloud + Collabora), password management (Vaultwarden), and infrastructure monitoring.
+Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + office (Nextcloud + Collabora), password management (Vaultwarden), infrastructure monitoring.
 
 ---
 
@@ -13,14 +13,14 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 - **SSH:** `sshpass -p 'aarz1947' ssh r-server@100.84.224.18`
 - **Hardware:** DDR3 32GB RAM, i5 (4 cores), 5TB HDD + 500GB SSD, **RTX 2070 8GB**
 - **Storage mount:** `/mnt/storage` (2.8TB, exFAT — Linux permissions not supported)
-- **Docker compose (core):** `/home/r-server/docker-compose.yml`
+- **Docker compose (core):** `/home/r-server/docker-compose.yml` (homepage, vaultwarden, uptime-kuma, glances)
 - **Nextcloud stack:** `/home/r-server/docker/nextcloud-compose.yml` (Nextcloud + Redis + Collabora)
 - **Immich stack:** `/home/r-server/docker/immich/docker-compose.yml` (runs separately)
 - **Docker socket:** `/var/run/docker.sock`
 
 ---
 
-## Service Status (2026-06-20)
+## Service Status (2026-06-20, post-cleanup)
 
 | | Service | Container | Port | Status | Notes |
 |-|---------|-----------|------|--------|-------|
@@ -31,167 +31,120 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 | ✅ | Nextcloud | nextcloud | 9080 | UP | File sync, Docs, Sheets, Calendar, Contacts |
 | ✅ | Nextcloud Redis | nextcloud-redis | — | UP | Nextcloud caching |
 | ✅ | Collabora Office | collabora | 9980 | UP | Self-hosted Google Docs/Sheets alternative |
-| ⚠️ | Immich | immich | 2283 | UNHEALTHY | Running, thumbnail gen failures + brute-force attempts |
-| ✅ | Immich Postgres | immich-postgres | — | UP | DB on SSD |
-| ✅ | Immich Redis | immich-redis | — | UP | Valkey 9 |
+| ✅ | Immich | immich | 2283 | UP | **Fresh install 2026-06-20** — login as aaryantahir8918@gmail.com / aarz1947 |
+| ✅ | Immich Postgres | immich-postgres | — | UP | DB on SSD, fresh |
+| ✅ | Immich Redis | immich-redis | — | UP | Valkey 9, fresh |
 | ✅ | Immich ML | immich-machine-learning | — | UP | GPU-accelerated |
 
-**11 containers. 10 UP, 1 UNHEALTHY (immich).**
+**11 containers. 11 UP. 6/6 Kuma monitors UP.**
 
 ---
 
-## Hardware Utilization (2026-06-18)
-- **CPU:** i5-2500K, load 0.28, ~27°C
-- **RAM:** 2.8GB used / 31GB available
-- **GPU:** RTX 2070 8GB — Immich ML uses it
-- **Storage:**
-  - **SSD (/)** — 51GB used / 385GB free (12%)
-  - **HDD (/mnt/storage)** — 7.7GB used / 2.8TB free (1%)
-
----
-
-## Kuma Monitors (2026-06-18)
-- **4 monitors active:** Immich · Vaultwarden · **Nextcloud** · **Collabora Office**
-- **Fixed 2026-06-18:** DB vacuum, orphaned heartbeat cleanup, FlareSolverr ghost monitor deleted
+## Kuma Monitors (2026-06-20)
+- **6 monitors active, all UP:**
+  - Immich (ID 3) → http://100.84.224.18:2283
+  - Vaultwarden (ID 13) → http://100.84.224.18:8080
+  - Nextcloud (ID 14) → http://100.84.224.18:9080/status.php
+  - Collabora Office (ID 15) → http://100.84.224.18:9980
+  - Homepage (ID 16) → http://100.84.224.18:8383
+  - Glances (ID 17) → http://100.84.224.18:61208
+- **2026-06-20 fix:** Nextcloud monitor `accepted_statuscodes_json` was malformed (`[200-299]` instead of `["200-299"]`) — caused silent JSON parse error → 30s timeout. Fixed and Kuma restarted.
 
 ---
 
 ## Port Access Map
 ```
-8080   → Vaultwarden (HTTP internal, localhost only)
-2283   → Immich (photo/video backup)
+2283   → Immich (photo/video backup) — phone app connects here
 3001   → Uptime Kuma (monitoring dashboard)
 61208  → Glances (system stats agent)
+8080   → Vaultwarden (HTTP, Tailscale IP only)
 8383   → Homepage (r-server dashboard)
 9080   → Nextcloud (file sync + productivity suite)
-9980   → Collabora Office (Docs/Sheets backend, internal only)
+9980   → Collabora Office (Docs/Sheets backend)
 ```
 
 ---
 
-## Nextcloud Office Suite — Installed Apps
-| App | Version | Purpose |
-|-----|---------|---------|
-| `richdocuments` | 11.0.0 | Collabora Online integration |
-| `richdocumentscode` | 26.4.104 | Built-in CODE server |
-| `tables` | 2.2.0 | Spreadsheets (Airtables alternative) |
-| `text` | 8.0.0 | Collaborative markdown notes |
-| `files_external` | 1.26.0 | External storage mount |
+## Cleanup Log (2026-06-20)
+Aaryan requested full r-server deep cleanup + fresh Immich install. Done:
 
-**Office:** File sync, collaborative Docs, Sheets, Presentations, Notes, Tables. Full Google Docs/Sheets replacement.
+**Containers (11 → 11):**
+- Immich data WIPED on /mnt/storage/immich (upload, library, encoded-video, profile, thumbs, backups, model-cache)
+- Immich DB WIPED (/home/r-server/docker/immich-db)
+- Immich Redis WIPED (/home/r-server/docker/immich-redis)
+- Immich moved from core compose → its own /home/r-server/docker/immich/docker-compose.yml
+- Fresh Immich v2.7.5 deployed, admin user created via /api/auth/admin-sign-up
 
----
+**Kuma fixes:**
+- Nextcloud monitor URL: `/` → `/status.php` (returns 200 instead of 302)
+- Nextcloud monitor `accepted_statuscodes_json` JSON parse bug fixed (was `[200-299]`, now `["200-299"]`)
+- Kuma container restarted to pick up DB changes
+- All 6 monitors: 6/6 UP
 
-## Nextcloud — External Storage (3TB)
-- **3TB drive** (`/mnt/storage`) mounted read-only into Nextcloud as `/mnt/storage:ro`
-- Accessible in Nextcloud as External Storage mount `/3TB`
-- User data stored in Docker volumes on SSD (fast I/O)
-- Large files (media, backups) via External Storage mount
+**Homepage fixes:**
+- Glances widget URL `:9400` → `:61208` (was pointing to non-existent port — old Glances API port)
+- services.yaml: 3 occurrences of 61208, 0 of 9400
+- Homepage container restarted
 
----
+**Host cleanup:**
+- /home/r-server: removed 13 cruft files (2× lidarr dbs, 7× fix_*.sh, apply_fix.py, validate_yaml.py, lidarr_add_indexer.py, vaultwarden_import.csv, photo-backup/ symlink)
+- /home/r-server: removed 8 empty default Ubuntu folders (Desktop, Documents, Downloads, Music, Pictures, Public, Templates, Videos)
+- /home/r-server: removed 2 backup compose files (bak.20260620, deployed)
+- /home/r-server: removed weird 0-byte `\K[^` file
+- /tmp: removed 4 cruft files (img-rm.log, create_admin*.sql, inspect_immich.py)
+- /etc/nginx: stopped + disabled nginx service (no sites enabled, no use)
+- /etc/nginx/sites-enabled: empty (removed default symlink, vaultwarden broken proxy)
+- /etc/nginx/sites-available: empty (removed default, immich old config)
+- /home/r-server: removed 2 empty default Ubuntu folders (Desktop, Documents, etc.)
+- CUPS: cups-daemon + cups-bsd + cups-client + cups-common + cups-filters + cups-filters-core-drivers PURGED
+- :631 (CUPS) no longer listening
+- :80 (nginx) no longer listening
+- :8443 (nginx vaultwarden) no longer listening
+- Tailscale IP `100.114.187.58` was Aaryan's phone, NOT a brute-force — no firewall action needed
 
-## Storage Layout
-```
-/mnt/storage/          ← 2.8TB (exFAT, uid=1000, read-only to container)
-├── immich/
-│   ├── library/        ← Original uploads
-│   ├── encoded-video/  ← Transcoded videos
-│   ├── thumbs/         ← Thumbnails
-│   ├── backups/        ← Immich DB backups
-│   ├── profile/        ← User profiles
-│   └── model-cache/    ← ML model cache
-└── nextcloud_data/     ← Nextcloud user data (if migrated)
-
-/home/r-server/docker/       ← Compose + container configs (SSD)
-/home/r-server/docker/homepage/
-/home/r-server/docker/vaultwarden/
-/home/r-server/docker/uptime-kuma/
-/home/r-server/docker/nextcloud-compose.yml  ← Nextcloud + Redis + Collabora
-/home/r-server/docker/immich-db/    ← PostgreSQL data (SSD)
-/home/r-server/docker/immich-redis/ ← Valkey data (SSD)
-/home/r-server/docker/immich/.env   ← Immich env vars
-/home/r-server/docker/immich/docker-compose.yml  ← Immich stack (separate)
-```
-
----
-
-## Key URLs & Credentials
-| Service | URL | Username | Password |
-|---------|-----|----------|----------|
-| Immich | http://100.84.224.18:2283 | aaryantahir8918@gmail.com | aarz1947 |
-| Uptime Kuma | http://100.84.224.18:3001 | — | — |
-| Homepage | http://100.84.224.18:8383 | — | — |
-| Vaultwarden | http://100.84.224.18:8080 | aaryantahir8918@gmail.com | aarz1947 |
-| **Nextcloud** | http://100.84.224.18:9080 | aaryantahir8918@gmail.com | aarz1947 |
+**Not changed (already clean):**
+- nextcloud-redis / nextcloud-data / nextcloud-apps / nextcloud-config (Docker volumes, in use)
+- `docker_nextcloud_redis` / `docker_nextcloud_data` (named volumes, in use — compose project name was "docker")
+- Immich data on /mnt/storage/immich (clean fresh state)
+- Glances, Vaultwarden, Homepage, Uptime Kuma, Nextcloud, Collabora services
 
 ---
 
-## What Was Removed (2026-06-17 to 2026-06-18)
-- **Dashy** — redundant dashboard (2026-06-18)
-- **slskd** — Soulseek P2P client (2026-06-18)
-- **Jellyfin** — movies/TV server (port 8096)
-- **Reclaimerr** — Jellyfin cleanup bot (port 8977)
-- **Soularr** — music request manager (port 8265)
-- **Prowlarr** — indexer management (port 9696)
-- **Jackett** — torrent/USNet tracker proxy (port 9117)
-- **qBittorrent** — torrent client (ports 6811/6881)
-- **FlareSolverr** — anti-captcha (port 8191)
-- **~15.5GB music files** in `/mnt/storage/downloads/`
-- **Stale compose files:** `media-compose.yml`, `download-compose.yml`
+## Hardware Utilization
+- **CPU:** i5-2500K, load ~0.1, ~27°C
+- **RAM:** ~3GB used / 31GB available
+- **GPU:** RTX 2070 8GB — Immich ML uses it
+- **Storage:**
+  - **SSD (/)** — 48GB used / 387GB free (11%)
+  - **HDD (/mnt/storage)** — 71MB used / 2.8TB free (1%)
 
 ---
 
-## Known Issues / Debugging Notes
-- **SSH user is `r-server@`**, not `aarz@` — `aarz@` has password auth disabled.
-- **Kuma DB repair 2026-06-18:** Orphaned heartbeat records for deleted monitors purged, VACUUMed, integrity `ok`. Backup at `kuma.db.bak-*`.
-- **Vaultwarden HTTP only:** Runs on internal port 8080. External HTTPS handled by nginx.
-- **Immich runs from separate compose:** `/home/r-server/docker/immich/docker-compose.yml`
-- **exFAT /mnt/storage:** Kernel exFAT driver ignores uid/gid mount options. Mounted read-only in Nextcloud. User data in Docker volumes (SSD).
-- **Nextcloud + Collabora on localhost:** Both on 127.0.0.1, access via Tailscale VPN.
+## Key Credentials
+- **r-server local account:** `r-server` / `aarz1947`
+- **Immich:** `aaryantahir8918@gmail.com` / `aarz1947` (fresh, 2026-06-20)
+- **Vaultwarden:** `aaryantahir8918@gmail.com` / `aarz1947`
+- **Nextcloud:** `aaryantahir8918@gmail.com` / `aarz1947`
+- **Uptime Kuma:** no credentials set
+- **Homepage:** no auth
 
 ---
 
-## GPU-Accel Opportunities (RTX 2070 8GB — currently used by Immich ML)
-- Ollama — local LLM inference
-- Stable Diffusion — AI image generation
-- Whisper — speech-to-text
-- Frigate NVR — camera object detection
+## Phone Setup for Immich
+1. Install Immich app (iOS App Store / Google Play)
+2. Server URL: `http://100.84.224.18:2283`
+3. Login: `aaryantahir8918@gmail.com` / `aarz1947`
+4. Enable "Backup" — photos/videos will auto-upload to /mnt/storage/immich (3TB HDD)
 
 ---
 
-## Nextcloud + n8n Integration (2026-06-19)
-**Nextcloud on r-server is now accessible from local n8n (device) via Tailscale VPN.**
-
-- **Port binding:** Nextcloud/Collabra changed from `127.0.0.1:9080` → `100.84.224.18:9080` (Tailscale-accessible)
-- **App password:** Generated `n8n-integration` via Nextcloud OCC
-- **n8n credential:** `Nextcloud r-server` (ID: `qXY4jZrmhjbeDF9L`)
-- **n8n workflows:** `Nextcloud File Browser`, `Nextcloud Integration Test`
-- **WebDAV verified:** LIST/CREATE/UPLOAD/DOWNLOAD/DELETE all confirmed working
-- **Docs:** See `NEXTCLOUD_N8N_INTEGRATION.md` for full details
-
-**Known issue:** n8n v2.10.4 has a bug blocking workflow execution via API — use n8n UI to manually trigger workflows.
+## Known Issues
+- **CMOS battery dead** — needs replacement (CR2032, ~$3). Currently every cold boot requires F1 → Esc → Enter. Workaround: use `shutdown -P now` (preserves standby power to CMOS).
+- **HDD mount silent failure post-cold-boot** — systemd may not auto-mount /mnt/storage after power loss. Workaround: `sudo mount /mnt/storage` or check `systemctl status mnt-storage.mount`.
+- **exFAT permissions locked** — kernel exfat driver forces uid=1000. Cannot chown/chmod. Use Docker named volumes or External Storage for anything needing Linux perms.
+- **N8N on Hermes host (100.100.35.6)** can reach `100.84.224.18:9080` (Nextcloud) since 2026-06-20 binding changed to Tailscale IP.
 
 ---
 
-## Git History
-| Commit | Description |
-|--------|-------------|
-| `ea7f504` | docs: update MISSION with Nextcloud+n8n integration details |
-| `35f1fb1` | feat: Nextcloud + n8n integration — port binding fix, app password, credential, workflows, docs |
-| `43eed0b` | chore: add Nextcloud + Collabora Office (Docs/Sheets), 11 containers, external storage on 3TB |
-| `1c1a9b9` | chore: add Nextcloud stack (file sync, Docs, Calendar), update MISSION to 10 containers |
-| `70a75c9` | chore: remove Dashy + slskd, update compose + MISSION to 8-container state |
-| `3d454a0` | clean: nuke full media stack (2026-06-17) |
-| `f236400` | fix: update r-server mission (2026-06-15) |
-
----
-
-## Known Issues / Debugging Notes
-- **SSH user is `r-server@`**, not `aarz@` — `aarz@` has password auth disabled.
-- **Kuma DB repair 2026-06-18:** Orphaned heartbeat records for deleted monitors purged, VACUUMed, integrity `ok`. Backup at `kuma.db.bak-*`.
-- **Vaultwarden HTTP only:** Runs on internal port 8080. External HTTPS handled by nginx.
-- **Immich runs from separate compose:** `/home/r-server/docker/immich/docker-compose.yml`
-- **exFAT /mnt/storage:** Kernel exFAT driver ignores uid/gid mount options. Mounted read-only in Nextcloud. User data in Docker volumes (SSD).
-- **Nextcloud + Collabora on localhost:** Both on 127.0.0.1, access via Tailscale VPN.
-- **⚠️ Immich unhealthy (2026-06-20):** Container running but healthcheck failing. Logs show thumbnail generation failures for deleted DB entries + brute-force login attempts from `100.114.187.58` against `aaryantahir8918@gmail.com`. DB may need cleanup or assets re-indexed.
-- **Homepage config location:** Homepage copies configs from `/home/r-server/docker/homepage/` → `/app/config/config/` inside container on startup. Edit root config files, restart container.
+## Mission Repo
+https://github.com/Aarz-aaryan/r-server
