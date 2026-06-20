@@ -18,7 +18,7 @@ services:
     container_name: vaultwarden
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:80"
+      - "100.84.224.18:8080:80"
     volumes:
       - /home/r-server/docker/vaultwarden:/data
     environment:
@@ -109,7 +109,7 @@ services:
       immich-redis:
         condition: service_healthy
     healthcheck:
-      test: curl -f http://localhost:2283/api/server-info/ping || exit 1
+      test: curl -f http://localhost:2283/api/server/ping || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
