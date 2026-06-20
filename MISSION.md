@@ -65,7 +65,8 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 
 ---
 
-## Cleanup Log (2026-06-20)
+## Cleanup Log
+### Pass 1 (2026-06-20, morning) — Containers + Kuma + Immich nuke
 Aaryan requested full r-server deep cleanup + fresh Immich install. Done:
 
 **Containers (11 → 11):**
@@ -148,3 +149,56 @@ Aaryan requested full r-server deep cleanup + fresh Immich install. Done:
 
 ## Mission Repo
 https://github.com/Aarz-aaryan/r-server
+
+### Pass 2 (2026-06-20, afternoon) — Deep filesystem audit
+Aaryan requested deep audit + cleanup of all files, stale backups, useless stuff. Total ~1.2GB freed + 50 packages removed + 11 GUI snaps + 5 broken snaps.
+
+**Killed:**
+- **`/home/r-server/scripts/` (14K)** — 3 dead scripts referencing nuked containers (qbittorrent, lidarr, prowlarr, jackett, jellyfin, navidrome, dashy, deluge). Stats-server.py was on dead port :9400. Replaced by Kuma (real-time) + Glances widget (system stats).
+- **`/home/r-server/logs/` (80K)** — June 9 stale logs (health_check.log, critical_container_logs.log)
+- **`/home/r-server/.cache/` (17M)** — Evolution, gstreamer, ibus, mesa, tracker3 — no GUI on r-server
+- **`/home/r-server/.config/` (13 dirs)** — dconf, evolution, gnome-*, gtk-3.0/4.0, ibus, nautilus, pulse, user-dirs.* — all GUI cruft
+- **`/home/r-server/.local/share/` (8 dirs)** — applications, evolution, flatpak, gnome-*, icc, keyrings, nautilus, session_migration-ubuntu, sounds, gvfs-metadata — all GUI cruft
+- **`/home/r-server/.local/state/wireplumber/`** — audio daemon state, no audio on server
+- **`/home/r-server/snap/`** — firefox, firmware-updater, snapd-desktop-integration dirs (snaps already removed)
+- **`/root/.cache/` (113M)** — pip cache from old Lidarr/beets installs
+- **`/root/.config/` (64K)** — root's stale config
+- **`/root/snap/` (~50M)** — firefox, firmware-updater, snap-store, mesa-2404 dirs
+- **`/var/cache/apt/` (320M → 44K)** — old .deb files
+- **`/var/cache/apparmor (4.3M)`, fwupd (15M), swcatalog (8.4M), debconf (5.4M), man (2.2M), fontconfig (1.4M), cracklib (476K), ldconfig (64K)** — all stale cache
+- **`/var/log/journal/` (245M → 64M)** — vacuumed to 50M, freed 181M of old boot logs
+- **`/var/log/syslog` (26M)** — truncated
+- **`/var/log/installer/` (1.7M)** — Ubuntu initial install logs from June 7, never needed
+- **`/var/log/btmp` (60K)** — 6 months of failed login attempts
+- **`/var/log/syslog.1` (15M)** — rotated log
+- **`/var/log/nginx/`** — deleted (nginx stopped, no sites)
+- **`/var/log/bootstrap.log`** — Ubuntu installer leftover
+- **`/var/cache/snapd/` (4.4M)** + **`/var/lib/snapd/snaps/` (395M)** — snap blobs
+- **`/usr/local/bin/`** (11 files) — beet, f2py, mid3cp, mid3iconv, mid3v2, moggsplit, mutagen-inspect, mutagen-pony, numba, numpy-config, unidecode, filetype — all from old music stack (beets/mutagen) and Lidarr (numpy/numba). Not used.
+- **`/tmp/fix-monitor14.sql`, `/tmp/upsert_admin.sql`** — leftover from earlier ops
+- **`/home/r-server/\K[^`** — weird 0-byte filename (orphan from `apt-get install` hiccup)
+- **`snap` package entirely** — including broken bases bare, core22, core24, gtk-common-themes, snapd (was broken after /var/lib/snapd/snaps/ wipe)
+- **15 packages via `apt autoremove --purge`**: cups-ipp-utils, hplip-data, libcupsimage2t64, libhpmud0, libimagequant0, liblouisutdml-bin, liblouisutdml-data, liblouisutdml9t64, libraqm0, libsane-hpaio, printer-driver-postscript-hp, python3-olefile, python3-pexpect, python3-pil, python3-ptyprocess, squashfs-tools
+- **5 GUI snaps removed**: firefox, firmware-updater, snapd-desktop-integration, snap-store, mesa-2404
+- **2 GNOME snaps removed**: gnome-42-2204, gnome-46-2404 (no GUI on server)
+
+**KEPT (deliberately):**
+- **`/opt/immich-photos/` (15GB, 1965 files)** — Aaryan's actual photo library backup from Nov 2025 → Jun 2026 (IMG_*.heic, IMG_*.jpg, IMG_*.mov). Found this after I'd already wiped /mnt/storage/immich. Was on /opt and survived the wipe. NOT deleted. Aaryan can decide later whether to import into new Immich via /api/asset/upload-external or just keep as backup. **Flagged for user decision.**
+- **`/opt/containerd/`** — Docker dependency
+- **`/var/log/sysstat/`** — last 9 days of sa/sar files. sysstat cron rotates these.
+- **`/var/lib/systemd/coredump/`** — empty, leave for safety
+- **All 11 Docker images** — all in active use by containers (homepage, immich, immich-ml, immich-postgres, immich-redis, vaultwarden, nextcloud, nextcloud-redis, collabora, glances, uptime-kuma)
+- **All 10 Docker volumes** — all in use (nextcloud_*, immich_*)
+- **`.local/share/keyrings/`** — SSH/GPG keyring (might still be needed)
+- **`.config/{gnupg, goa-1.0, gtk-*}`** — keep, some apps might need
+- **`/var/cache/{apt, dictionaries-common, samba, PackageKit, app-info, fwupdmgr, colord, adduser, tailscale}`** — active caches, tiny
+- **`/home/r-server/.gnupg/`, `/home/r-server/.ssh/`** — credentials
+- **`/home/r-server/{docker-compose.yml, docker/}`** — active Docker stack
+
+**Final stats:**
+- Disk freed: 47G → 44G on / (3GB freed), /mnt/storage unchanged (71M)
+- Packages removed: 15
+- Snaps removed: 5 GUI + 2 GNOME + snapd daemon entirely
+- Containers UP: 11/11
+- Kuma monitors UP: 6/6
+- Immich login: HTTP 201 ✅
