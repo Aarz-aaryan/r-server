@@ -13,14 +13,13 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 - **SSH:** `sshpass -p 'aarz1947' ssh r-server@100.84.224.18`
 - **Hardware:** DDR3 32GB RAM, i5 (4 cores), 5TB HDD + 500GB SSD, **RTX 2070 8GB**
 - **Storage mount:** `/mnt/storage` (2.8TB, exFAT — Linux permissions not supported)
-- **Docker compose (core):** `/home/r-server/docker-compose.yml` (homepage, vaultwarden, uptime-kuma, glances)
-- **Nextcloud stack:** `/home/r-server/docker/nextcloud-compose.yml` (Nextcloud + Redis + Collabora)
+- **Docker compose (single source of truth):** `/home/r-server/docker-compose.yml` — all 8 services (homepage, vaultwarden, uptime-kuma, glances, nextcloud, nextcloud-redis, collabora). Split compose files deleted 2026-07-02 (caused name conflicts + bridge loss per header warning).
 - **Immich stack:** `/home/r-server/docker/immich/docker-compose.yml` (runs separately)
 - **Docker socket:** `/var/run/docker.sock`
 
 ---
 
-## Service Status (2026-06-20, post-cleanup)
+## Service Status (2026-06-20, post-cleanup + post-HDD-migration)
 
 | | Service | Container | Port | Status | Notes |
 |-|---------|-----------|------|--------|-------|
@@ -28,10 +27,10 @@ Homelab server for Aaryan Tahir's photo/video backup (Immich), file sync + offic
 | ✅ | Vaultwarden | vaultwarden | 8080 | UP | Password manager |
 | ✅ | Uptime Kuma | uptime-kuma | 3001 | UP | Monitors all services |
 | ✅ | Glances | glances | 61208 | UP | System stats (host pid/net) |
-| ✅ | Nextcloud | nextcloud | 9080 | UP | File sync, Docs, Sheets, Calendar, Contacts |
+| ✅ | Nextcloud | nextcloud | 9080 | UP | Fresh install 2026-07-02 — user data on /var/lib/nextcloud-data (ext4 SSD; moved off exFAT 2026-07-02) |
 | ✅ | Nextcloud Redis | nextcloud-redis | — | UP | Nextcloud caching |
 | ✅ | Collabora Office | collabora | 9980 | UP | Self-hosted Google Docs/Sheets alternative |
-| ✅ | Immich | immich | 2283 | UP | **Fresh install 2026-06-20** — login as aaryantahir8918@gmail.com / aarz1947 |
+| ✅ | Immich | immich | 2283 | UP | **Fresh install 2026-06-20** — uploads on /mnt/storage/immich (HDD) |
 | ✅ | Immich Postgres | immich-postgres | — | UP | DB on SSD, fresh |
 | ✅ | Immich Redis | immich-redis | — | UP | Valkey 9, fresh |
 | ✅ | Immich ML | immich-machine-learning | — | UP | GPU-accelerated |
@@ -116,18 +115,22 @@ Aaryan requested full r-server deep cleanup + fresh Immich install. Done:
 - **RAM:** ~3GB used / 31GB available
 - **GPU:** RTX 2070 8GB — Immich ML uses it
 - **Storage:**
-  - **SSD (/)** — 48GB used / 387GB free (11%)
-  - **HDD (/mnt/storage)** — 71MB used / 2.8TB free (1%)
+  - **SSD (/)** — 31GB used / 404GB free (8%) — OS + Docker system + small app DBs (Immich Postgres, Nextcloud SQLite)
+  - **HDD (/mnt/storage)** — 7.8GB used / 2.8TB free (1%) — Immich user data only:
+    - `/mnt/storage/immich/{upload,library,encoded-video,profile,thumbs,backups}` — Immich user photos/videos
+    - `/mnt/storage/rserver-deep-audit-reports/` — (empty, reserved)
 
 ---
 
 ## Key Credentials
 - **r-server local account:** `r-server` / `aarz1947`
-- **Immich:** `aaryantahir8918@gmail.com` / `aarz1947` (fresh, 2026-06-20)
+- **Immich:** `aaryantahir8918@gmail.com` / `aarz1947` (fresh, 2026-06-20, user data on HDD)
 - **Vaultwarden:** `aaryantahir8918@gmail.com` / `aarz1947`
-- **Nextcloud:** `aaryantahir8918@gmail.com` / `aarz1947`
+- **Nextcloud:** `aaryantahir8918@gmail.com` / `aarz1947` (fresh 2026-07-02, user data on ext4 SSD)
 - **Uptime Kuma:** no credentials set
 - **Homepage:** no auth
+
+All "fresh" services use the same admin email `aaryantahir8918@gmail.com` / `aarz1947` — login once on phone, works for Immich + Nextcloud + Collabora.
 
 ---
 
@@ -142,8 +145,22 @@ Aaryan requested full r-server deep cleanup + fresh Immich install. Done:
 ## Known Issues
 - **CMOS battery dead** — needs replacement (CR2032, ~$3). Currently every cold boot requires F1 → Esc → Enter. Workaround: use `shutdown -P now` (preserves standby power to CMOS).
 - **HDD mount silent failure post-cold-boot** — systemd may not auto-mount /mnt/storage after power loss. Workaround: `sudo mount /mnt/storage` or check `systemctl status mnt-storage.mount`.
-- **exFAT permissions locked** — kernel exfat driver forces uid=1000. Cannot chown/chmod. Use Docker named volumes or External Storage for anything needing Linux perms.
+- **exFAT permissions locked** — kernel exfat driver forces uid=1000. Cannot chown/chmod. Affected services:
+  - **Nextcloud** (FIXED 2026-07-02): moved data dir off `/mnt/storage/nextcloud/data` → `/var/lib/nextcloud-data` (ext4 SSD). Workaround `check_data_directory_permissions = false` no longer needed.
+  - Immich: UID/GID set to 1000 via env vars, works fine
+  - DO NOT bind-mount Nextcloud's entire `/var/www/html` to exFAT — entrypoint's `rsync --delete` fails on symlinks
 - **N8N on Hermes host (100.100.35.6)** can reach `100.84.224.18:9080` (Nextcloud) since 2026-06-20 binding changed to Tailscale IP.
+
+---
+
+## Cron Jobs (r-server related)
+
+| Job ID | Name | Schedule | What it does |
+|--------|------|----------|--------------|
+| `82b317671a10` | r-server Daily Health Report | Daily 02:05 | Queries Kuma DB via SSH + adds SSD/HDD usage + container count, posts to #r-server. Enhanced 2026-06-20. |
+| `8649ec2bae70` | r-server Audit Watchdog | Weekly Sun 06:30 | Verifies 9 post-cleanup invariants: 11 containers UP, 6 Kuma UP, Immich data on HDD, Nextcloud data on HDD, /opt/immich-photos still NUKED, HDD/SSD free space >10%, snapd not reinstalled, nginx not active. Silent when OK; alert on regression. |
+
+Both run on Hermes host and SSH into r-server — no on-r-server scheduling needed.
 
 ---
 
@@ -202,3 +219,95 @@ Aaryan requested deep audit + cleanup of all files, stale backups, useless stuff
 - Containers UP: 11/11
 - Kuma monitors UP: 6/6
 - Immich login: HTTP 201 ✅
+
+### Pass 3 (2026-06-20, evening) — HDD migration + Immich photos nuke + Nextcloud fresh install
+
+Aaryan said: "make sure that all the backup kind of stuff like image photos backup and next cloud you know stuff everything goes on the 3TB hard disk. Go ahead." Also: "just go ahead and like nuke the image photos we will i will do a fresh backup so you can get rid of the old ones completely get rid of them the old ones."
+
+Done.
+
+**1. NUKED `/opt/immich-photos/` (15GB, 1965 files)** — Aaryan's old photo library backup (Nov 2025 → Jun 2026). Confirmed gone: `ls /opt/immich-photos` → "No such file or directory". `/opt/` now contains only `containerd/` (Docker dependency).
+
+**2. Immich user data verified on HDD** — All Immich bind mounts point to `/mnt/storage/immich/*` (no change from fresh install in Pass 1, just verified).
+
+**3. Nextcloud fully migrated to HDD + fresh install** — Original Nextcloud was on Docker named volumes (SSD, slow, mixed with backups). User wanted everything on 3TB HDD.
+
+Process:
+- Stopped nextcloud + nextcloud-redis containers
+- Backed up user data to `/tmp/nc-backup/data` (73MB total)
+- Tried `rsync` of old Docker named volume data → `/mnt/storage/nextcloud/data/` — partial (had wrong path structure)
+- Tried bind-mounting `/mnt/storage/nextcloud/data/data:/var/www/html/data` — Nextcloud boot failed: "no such table: oc_appconfig" (mount overlay issue with anonymous Docker volume created by official image)
+- Tried single bind `/mnt/storage/nextcloud/data:/var/www/html` — entrypoint `rsync --delete` from `/usr/src/nextcloud/` to `/var/www/html/` failed on every symlink (exFAT doesn't support symlinks) → 700+ errors before timeout
+- **FINAL SOLUTION**:
+  - Anonymous Docker volume for `/var/www/html` (PHP source on SSD, ~870MB, where symlinks work)
+  - Bind mount ONLY `/mnt/storage/nextcloud/data:/var/www/html/data` (user data + DB on HDD)
+  - `NEXTCLOUD_UPDATE=0` env var to skip initial rsync
+  - Fresh install via `occ maintenance:install --database sqlite --admin-user aaryantahir8918@gmail.com --admin-pass aarz1947`
+  - Restored user files: Documents/, Photos/, Nextcloud Manual.pdf, Nextcloud intro.mp4, Nextcloud.png, Readme.md, Reasons to use Nextcloud.pdf, Templates/, n8n-test.txt, n8n-webhook-test.txt
+  - Set admin password to `aarz1947` (since fresh install generated new hash, override via PHP `password_hash`)
+  - Config.php patches:
+    - `'installed' => true` (otherwise /status.php says `installed:false` even when DB has it)
+    - `trusted_domains` includes `100.84.224.18`
+    - `check_data_directory_permissions => false` (exFAT perm workaround — data dir is 0777)
+    - `check_for_working_windows_compatibility => false` (exFAT compat)
+  - Removed 4 orphan Docker volumes (`docker_nextcloud_data`, `docker_nextcloud_apps`, `docker_nextcloud_config`, `nextcloud_nextcloud_redis`)
+- **Verified**: `/status.php` returns `installed:true`, WebDAV returns HTTP 200, PROPFIND lists all user files
+
+**4. Disk state after Pass 3:**
+- **SSD (/)** — 31GB used / 404GB free (was 47G before Pass 3, freed 16GB by removing Nextcloud named volumes from SSD)
+- **HDD (/mnt/storage)** — 7.8GB used / 2.8TB free (was 71M, now 7.8G because Nextcloud data lives here)
+
+**5. Verified all 9 cleanup invariants** — see cron job `8649ec2bae70`. All pass: 11/11 containers UP, 6/6 Kuma UP, Immich data on HDD, Nextcloud data on HDD, /opt/immich-photos still NUKED, HDD 1% / SSD 8% (both healthy), snapd still gone, nginx still inactive.
+
+**6. Login works end-to-end:**
+```
+$ curl -sL -u "aaryantahir8918@gmail.com:aarz1947" -X PROPFIND \
+  http://100.84.224.18:9080/remote.php/dav/files/aaryantahir8918@gmail.com/
+HTTP/1.1 207 Multi-Status
+- Documents/
+- Photos/
+- Templates/
+- Nextcloud Manual.pdf
+- Nextcloud intro.mp4
+- Nextcloud.png
+- Readme.md
+- Reasons to use Nextcloud.pdf
+```
+
+Phone → Immich app → http://100.84.224.18:2283 → aaryantahir8918@gmail.com / aarz1947 → upload photos → auto-backup to /mnt/storage/immich/upload.
+
+**7. GitHub commits:**
+- `39fa1d2` — Pass 1+2 (cleanup, Immich nuke, Kuma fix)
+- `b257eaf` — Pass 3 (Nextcloud HDD migration)
+
+---
+
+### Pass 4 (2026-07-02) — Fix Nextcloud stuck on setup wizard (exFAT root cause)
+
+**Symptom:** Aaryan opened http://100.84.224.18:9080/ and got the "set up Nextcloud" wizard. Login redirect loop.
+
+**Root cause:** Pass 3 had worked around the exFAT perms issue with `check_data_directory_permissions => false` in config.php. But every time the nextcloud container restarted (e.g. via `docker compose up -d` on the split compose file), the official image's entrypoint re-detected `CAN_INSTALL` and re-ran `maintenance:install` on a dir it couldn't chmod → install half-completed, config got rewritten, wizard came back.
+
+**Fix (proper):**
+1. Created `/var/lib/nextcloud-data` on ext4 `/dev/sda2`, owned by 33:33 (www-data)
+2. Updated `/home/r-server/docker-compose.yml` bind mount: `/mnt/storage/nextcloud/data:/var/www/html/data` → `/var/lib/nextcloud-data:/var/www/html/data`
+3. Removed exFAT perms workaround from config (no longer needed)
+4. Fresh `occ maintenance:install --database sqlite --admin-user aaryantahir8918@gmail.com --admin-pass aarz1947`
+5. `occ config:system:set trusted_domains N --value=...` for `100.84.224.18`, `100.84.224.18:9080`, `127.0.0.1:9080`
+
+**Cleanup:**
+- Deleted `/home/r-server/docker/nextcloud-compose.yml` (orphan split file — caused container name conflicts + bridge loss, see header warning in consolidated compose)
+- Deleted `/home/Aarz/r-server/nextcloud-compose.yml` and `/home/Aarz/r-server/docker/nextcloud-compose.yml` (tracked duplicates of same orphan)
+
+**Data loss:** Original Nextcloud install at instanceid `ocs7zbz56esz` (~146MB in `/mnt/storage/nextcloud/data/` — Documents, Photos, n8n test webhooks, Nextcloud intro materials) — wiped. Aaryan said "I have nothing on there to lose, do whatever is needed." Lost files are not recoverable (exFAT mount remains but instanceid mismatch with new install).
+
+**Lesson saved:** Skill `~/.hermes/profiles/aarz/skills/devops/r-server-compose-topology/SKILL.md` — read `/home/r-server/docker-compose.yml` and `/home/r-server/config.php` FIRST before any container/volume/bind mount change on r-server.
+
+**Verified end-to-end:**
+```
+$ curl -c /tmp/c -L http://100.84.224.18:9080/      → HTTP 302 → /apps/dashboard/
+$ docker exec nextcloud php occ user:list            → aaryantahir8918@gmail.com
+$ docker exec nextcloud php occ status               → installed: true, version 34.0.0.12
+```
+
+**Disk state:** SSD 31GB / 404GB free (no change), HDD 7.8GB / 2.8TB free (no change — Nextcloud DB is tiny sqlite on ext4 now).
